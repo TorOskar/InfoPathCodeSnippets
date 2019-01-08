@@ -44,7 +44,7 @@ namespace Droneskjema
             }
         }
 
-        
+
         private object _feeForAvslutning
         {
             get
@@ -57,6 +57,19 @@ namespace Droneskjema
             }
         }
 
+
+        private object _languageCode
+        {
+            get
+            {
+                return FormState["_languageCode"];
+            }
+            set
+            {
+                FormState["_languageCode"] = value;
+            }
+        }
+
         
         
         
@@ -65,8 +78,27 @@ namespace Droneskjema
             EventManager.XmlEvents["/melding/Organisasjon/organisasjonsnummer"].Changed += new XmlChangedEventHandler(organisasjonsnummer_Changed);
             EventManager.XmlEvents["/melding/Skjemadata/erOppstart"].Changed += new XmlChangedEventHandler(erOppstart_Changed);
 
+            // Get the language code from FormState
+            GetTheLanguageCodeFromInfopath();
+        }
 
-            DebugCompareCountryCodeLists();
+
+        public void GetTheLanguageCodeFromInfopath()
+        {
+            _languageCode = "1044"; // defaults to bokmaal
+
+            if (FormState.Contains("Language"))
+            {
+                if (FormState["Language"].Equals(1044)) _languageCode = "1044";
+                if (FormState["Language"].Equals(2068)) _languageCode = "2068";
+                if (FormState["Language"].Equals(1033)) _languageCode = "1033";
+            }
+        }
+
+
+        public int GetTheFormLanguageCode()
+        {
+            return Convert.ToInt32(_languageCode);
         }
 
         
@@ -75,36 +107,6 @@ namespace Droneskjema
             if (node.MoveToAttribute("nil", "http://www.w3.org/2001/XMLSchema-instance"))
                 node.DeleteSelf();
         }
-
-
-        public void DebugCompareCountryCodeLists()
-        {
-
-            no.altinn.infopathCodeList.CodeList codeListLT_Land = GetAltinnCodeList("LT_Land", 1044);
-            no.altinn.infopathCodeList.CodeList codeListASF_Land = GetAltinnCodeList("ASF_Land", 1044);
-            bool isLand = false;
-            string lands = "";
-            string asfLand = "";
-
-            for (int asf = 0; asf < codeListASF_Land.CodeListRows.Length; asf++)
-            {
-                    asfLand = codeListASF_Land.CodeListRows[asf].Value1.ToUpper();
-                    isLand = false;
-
-                    for (int lt = 0; lt < codeListLT_Land.CodeListRows.Length; lt++)
-                    {
-                        if (codeListLT_Land.CodeListRows[lt].Value2.ToUpper().Contains(asfLand))
-                        {
-                            isLand = true;
-                        }
-                    }
-                    if (!isLand)
-                    {
-                        lands = lands + " " + asfLand; 
-                    }
-            }
-        }
-
 
 
 
@@ -171,11 +173,11 @@ namespace Droneskjema
             SetNodeToString("/melding/Organisasjon/e-post", data.EMailAddress, nullMelding);
             SetGuiCtrlForEmptyErData(data.EMailAddress, "/uictrl/e-post");
 
-            string countryName = FindAltinnCodeListNameForCountryCode(data.CountryCode);
-            if (!String.IsNullOrEmpty(countryName))
-                SetNodeToString("/melding/Organisasjon/land", countryName, nullMelding);
+            LT_LandCountryInfo countryName = FindAltinnCodeListNameForCountryCode(data.CountryCode);
+            if (countryName != null)
+                SetNodeToString("/melding/Organisasjon/land", countryName.BackendCode, nullMelding);
             else
-                SetGuiCtrlNode("/uictrl/land", "CanEdit");
+                SetGuiCtrlNode("/uictrl/land", countryName.Name);
     
             SetNodeToString("/melding/Organisasjon/navn", data.Name, nullMelding);
             SetGuiCtrlForEmptyErData(data.Name, "/uictrl/navn");
@@ -194,14 +196,6 @@ namespace Droneskjema
         public void organisasjonsnummer_Changed(object sender, XmlEventArgs e)
         {
             string errorKey = "ORGNUM";
-
-            //ReportError(e, "DUDE", "DUDE", "DUDE");
-            //ReportError(e, "WOBLER", "WOBLER", "WOBLER");
-
-            //DeleteErrorKey("DUDE");
-            //DeleteErrorKey("WOBLER");
-
-
 
             ValidationResult result = Validate_organisasjonsnummer(e.Site.InnerXml);
             if (result.IsValid == true)
@@ -242,50 +236,38 @@ namespace Droneskjema
 
 
 
-        public string FindAltinnCodeListNameForCountryCode(string countryCode)
+        public LT_LandCountryInfo FindAltinnCodeListNameForCountryCode(string countryCode)
         {
             // Altinn prod sends country code as two letters XX per https://no.wikipedia.org/wiki/ISO_3166-1_alfa-2
-            // Match letters with "Title" field of LT_Land codelist (XX)
+            // Match letters with "Value3" field of LT_Land codelist (XX)
+            // Return the country name and the Value 2 and LT code in the Code field
+
+            LT_LandCountryInfo returnData = null;
+
 
             // Did not get any data
-            if (String.IsNullOrEmpty(countryCode))
-                return String.Empty;
+            if (String.IsNullOrEmpty(countryCode)) return returnData; // null
 
             // Did no get a valid two digit CC
             Match CCValid = Regex.Match(countryCode.ToUpper(), "^[A-Z]{2}$");
-            if (!CCValid.Success)
-                return String.Empty;
-
-            string asfLand = String.Empty;
-            string ltLand = String.Empty;
+            if (!CCValid.Success) return returnData; // null
 
             try
             {
-                no.altinn.infopathCodeList.CodeList codeListLT_Land = GetAltinnCodeList("LT_Land", 1044);
-                no.altinn.infopathCodeList.CodeList codeListASF_Land = GetAltinnCodeList("ASF_Land", 1044);
+                no.altinn.infopathCodeList.CodeList codeListLT_Land = GetAltinnCodeList("LT_Land", GetTheFormLanguageCode());
 
-                // Find the country name from ASF_Land
-                for (int asf = 0; asf < codeListASF_Land.CodeListRows.Length; asf++)
+                for (int lt = 0; lt < codeListLT_Land.CodeListRows.Length; lt++)
                 {
-                    if (codeListASF_Land.CodeListRows[asf].Value2.ToUpper().Contains(countryCode.ToUpper()))
+                    if (codeListLT_Land.CodeListRows[lt].Value3.ToUpper().Contains(countryCode.ToUpper()))
                     {
-                        asfLand = codeListASF_Land.CodeListRows[asf].Value1.ToUpper();
-
-                        for (int lt = 0; lt < codeListLT_Land.CodeListRows.Length; lt++)
-                        {
-                            if (codeListLT_Land.CodeListRows[lt].Value2.ToUpper().Contains(asfLand))
-                            {
-                                return codeListLT_Land.CodeListRows[lt].Value2;
-                            }
-                        }
+                        returnData = new LT_LandCountryInfo(codeListLT_Land.CodeListRows[lt].Value2, codeListLT_Land.CodeListRows[lt].Code); 
                     }
                 }
             }
             catch { }
 
-            return ltLand;
+            return returnData;
         }
-
 
         
         
@@ -431,4 +413,36 @@ namespace Droneskjema
             ErrorMsg = errorMsg;
         }
     }
+
+    
+    
+    public class LT_LandCountryInfo
+    {
+        private string _name;
+        private string _backendCode;
+
+        public string Name
+        {
+            get { return this._name; }
+            set { this._name = value; }
+        }
+
+        public string BackendCode
+        {
+            get { return _backendCode; }
+            set { _backendCode = value; }
+        }
+
+        public LT_LandCountryInfo()
+        {
+        }
+
+        public LT_LandCountryInfo(string name, string backendCode)
+        {
+            Name = name;
+            BackendCode = backendCode;
+        }
+    }
+
+
 }
