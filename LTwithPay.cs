@@ -75,11 +75,11 @@ namespace Droneskjema
         
         public void InternalStartup()
         {
-            //EventManager.XmlEvents["/melding/Organisasjon/organisasjonsnummer"].Changed += new XmlChangedEventHandler(organisasjonsnummer_Changed);
-            //EventManager.XmlEvents["/melding/Skjemadata/erOppstart"].Changed += new XmlChangedEventHandler(erOppstart_Changed);
+            EventManager.XmlEvents["/melding/Organisasjon/organisasjonsnummer"].Changed += new XmlChangedEventHandler(organisasjonsnummer_Changed);
+            EventManager.XmlEvents["/melding/Skjemadata/erOppstart"].Changed += new XmlChangedEventHandler(erOppstart_Changed);
 
             // Get the language code from FormState
-            _languageCode = "NOTINITIALIZED";
+            //_languageCode = "NOTINITIALIZED";
         }
 
 
@@ -105,11 +105,12 @@ namespace Droneskjema
 
         public int GetTheFormLanguageCode()
         {
-            if ((string)_languageCode == "NOTINITIALIZED")
-            {
-                GetTheLanguageCodeFromInfopath();
-            }
-            return Convert.ToInt32(_languageCode);
+            //if ((string)_languageCode == "NOTINITIALIZED")
+            //{
+            //    GetTheLanguageCodeFromInfopath();
+            //}
+            //return Convert.ToInt32(_languageCode);
+            return 1044;
         }
 
         
