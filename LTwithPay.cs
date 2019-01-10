@@ -57,19 +57,6 @@ namespace Droneskjema
             }
         }
 
-
-        private object _languageCode
-        {
-            get
-            {
-                return FormState["_languageCode"];
-            }
-            set
-            {
-                FormState["_languageCode"] = value;
-            }
-        }
-
         
         
         
@@ -77,40 +64,24 @@ namespace Droneskjema
         {
             EventManager.XmlEvents["/melding/Organisasjon/organisasjonsnummer"].Changed += new XmlChangedEventHandler(organisasjonsnummer_Changed);
             EventManager.XmlEvents["/melding/Skjemadata/erOppstart"].Changed += new XmlChangedEventHandler(erOppstart_Changed);
-
-            // Get the language code from FormState
-            //_languageCode = "NOTINITIALIZED";
-        }
-
-
-        public void GetTheLanguageCodeFromInfopath()
-        {
-            _languageCode = "1044"; // defaults to bokmaal
-
-            try
-            {
-                if (FormState.Contains("Language"))
-                {
-                    if (FormState["Language"].Equals(1044)) _languageCode = "1044";
-                    if (FormState["Language"].Equals(2068)) _languageCode = "2068";
-                    if (FormState["Language"].Equals(1033)) _languageCode = "1033";
-                }
-            }
-            catch
-            {
-                _languageCode = "1044"; // defaults to bokmaal
-            }
         }
 
 
         public int GetTheFormLanguageCode()
         {
-            //if ((string)_languageCode == "NOTINITIALIZED")
-            //{
-            //    GetTheLanguageCodeFromInfopath();
-            //}
-            //return Convert.ToInt32(_languageCode);
-            return 1044;
+            int cc = 0;
+
+            if (FormState.Contains("Language"))
+            {
+                if (FormState["Language"].Equals(1044)) cc =  1044;
+                if (FormState["Language"].Equals(2068)) cc = 2068;
+                if (FormState["Language"].Equals(1033)) cc = 1033;
+            }
+            else
+            {
+                cc = 1044; // defaults to bokmaal
+            }
+            return cc;
         }
 
         
@@ -162,7 +133,8 @@ namespace Droneskjema
                 DeleteNil(node);
                 node.SetValue(nillValue);
             } else {
-                // do nothing
+                DeleteNil(node);
+                node.SetValue("");
             }
         }
 
@@ -194,6 +166,7 @@ namespace Droneskjema
             }
             else
                 SetGuiCtrlNode("/uictrl/land", "USEPULLDOWN");
+            SetNodeToString("/melding/Organisasjon/land", null, null);
     
             SetNodeToString("/melding/Organisasjon/navn", data.Name, nullMelding);
             SetGuiCtrlForEmptyErData(data.Name, "/uictrl/navn");
