@@ -75,11 +75,11 @@ namespace Droneskjema
         
         public void InternalStartup()
         {
-            EventManager.XmlEvents["/melding/Organisasjon/organisasjonsnummer"].Changed += new XmlChangedEventHandler(organisasjonsnummer_Changed);
-            EventManager.XmlEvents["/melding/Skjemadata/erOppstart"].Changed += new XmlChangedEventHandler(erOppstart_Changed);
+            //EventManager.XmlEvents["/melding/Organisasjon/organisasjonsnummer"].Changed += new XmlChangedEventHandler(organisasjonsnummer_Changed);
+            //EventManager.XmlEvents["/melding/Skjemadata/erOppstart"].Changed += new XmlChangedEventHandler(erOppstart_Changed);
 
             // Get the language code from FormState
-            GetTheLanguageCodeFromInfopath();
+            _languageCode = "NOTINITIALIZED";
         }
 
 
@@ -87,17 +87,28 @@ namespace Droneskjema
         {
             _languageCode = "1044"; // defaults to bokmaal
 
-            if (FormState.Contains("Language"))
+            try
             {
-                if (FormState["Language"].Equals(1044)) _languageCode = "1044";
-                if (FormState["Language"].Equals(2068)) _languageCode = "2068";
-                if (FormState["Language"].Equals(1033)) _languageCode = "1033";
+                if (FormState.Contains("Language"))
+                {
+                    if (FormState["Language"].Equals(1044)) _languageCode = "1044";
+                    if (FormState["Language"].Equals(2068)) _languageCode = "2068";
+                    if (FormState["Language"].Equals(1033)) _languageCode = "1033";
+                }
+            }
+            catch
+            {
+                _languageCode = "1044"; // defaults to bokmaal
             }
         }
 
 
         public int GetTheFormLanguageCode()
         {
+            if ((string)_languageCode == "NOTINITIALIZED")
+            {
+                GetTheLanguageCodeFromInfopath();
+            }
             return Convert.ToInt32(_languageCode);
         }
 
@@ -174,10 +185,14 @@ namespace Droneskjema
             SetGuiCtrlForEmptyErData(data.EMailAddress, "/uictrl/e-post");
 
             LT_LandCountryInfo countryName = FindAltinnCodeListNameForCountryCode(data.CountryCode);
-            if (countryName != null)
+            if (countryName != null) 
+            {
                 SetNodeToString("/melding/Organisasjon/land", countryName.BackendCode, nullMelding);
+                SetGuiCtrlNode("/uictrl/land_display_field", countryName.Name);
+                SetGuiCtrlNode("/uictrl/land", "USETEXTBOX");
+            }
             else
-                SetGuiCtrlNode("/uictrl/land", countryName.Name);
+                SetGuiCtrlNode("/uictrl/land", "USEPULLDOWN");
     
             SetNodeToString("/melding/Organisasjon/navn", data.Name, nullMelding);
             SetGuiCtrlForEmptyErData(data.Name, "/uictrl/navn");
@@ -443,6 +458,4 @@ namespace Droneskjema
             BackendCode = backendCode;
         }
     }
-
-
 }
