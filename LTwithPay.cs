@@ -66,7 +66,59 @@ namespace Droneskjema
             EventManager.XmlEvents["/melding/Skjemadata/erOppstart"].Changed += new XmlChangedEventHandler(erOppstart_Changed);
         }
 
+        
+        
+        public void organisasjonsnummer_Changed(object sender, XmlEventArgs e)
+        {
+            string errorKey = "ORGNUM";
 
+            ValidationResult result = Validate_organisasjonsnummer(e.Site.InnerXml);
+            if (result.IsValid == true)
+            {
+                ReportError(e, errorKey, "Organisasjonsnummer", "Henter data fra Enhetsregisteret");
+                result = GetOrgNumberData(e.Site.InnerXml);
+                if (result.IsValid == true)
+                {
+                    DeleteErrorKey(errorKey);
+                }
+                else
+                {
+                    ReportError(e, errorKey, "Organisasjonsnummer", result.ErrorMsg);
+                }
+            }
+            else
+            {
+                ReportError(e, errorKey, "Organisasjonsnummer", result.ErrorMsg);
+            }
+        }
+
+        
+        
+        public void erOppstart_Changed(object sender, XmlEventArgs e)
+        {
+            string errorKey = "OPPSTARTCHANGED";
+            DeleteErrorKey(errorKey);
+
+            bool isGotFeesFromCodeList = GetRpasFeeFromCodeList();
+
+            if (!isGotFeesFromCodeList)
+            {
+                ReportError(e, errorKey, "Avgift", "Feil ved utlesing av avgift, prøv igjen senere");
+            }
+
+            if (!String.IsNullOrEmpty(e.Site.InnerXml) && Convert.ToBoolean(e.Site.InnerXml) == true)
+            {
+                SetNodeToString("/melding/Betaling/sum", _feeForOppstart.ToString(), String.Empty);
+            }
+            else if (!String.IsNullOrEmpty(e.Site.InnerXml) && Convert.ToBoolean(e.Site.InnerXml) == false)
+            {
+                // Avslutning, ingen betaling, sum settes til _feeForAvslutning
+                SetNodeToString("/melding/Betaling/sum", _feeForAvslutning.ToString(), String.Empty);
+            }
+        }
+
+        
+        
         public int GetTheFormLanguageCode()
         {
             int cc = 0;
@@ -103,9 +155,9 @@ namespace Droneskjema
                 PopulateDataForOrgNumber(data);
                 return new ValidationResult(true, "Data ble hentet fra Enhetsregisteret");
             }
-            catch (Exception e) 
+            catch 
             {
-                return new ValidationResult(false, "Feil ved uthenting av data, prøv igjen senere");
+                return new ValidationResult(false, "Feil ved uthenting av data fra Enhetsregisteret");
             }
         }
 
@@ -182,32 +234,6 @@ namespace Droneskjema
         }
 
 
-        public void organisasjonsnummer_Changed(object sender, XmlEventArgs e)
-        {
-            string errorKey = "ORGNUM";
-
-            ValidationResult result = Validate_organisasjonsnummer(e.Site.InnerXml);
-            if (result.IsValid == true)
-            {
-                ReportError(e, errorKey, "Organisasjonsnummer", "Henter data fra Enhetsregisteret");
-                result = GetOrgNumberData(e.Site.InnerXml);
-                if (result.IsValid == true)
-                {
-                    DeleteErrorKey(errorKey);
-                }
-                else
-                {
-                    ReportError(e, errorKey, "Organisasjonsnummer", result.ErrorMsg);
-                }
-            }
-            else
-            {
-                ReportError(e, errorKey, "Organisasjonsnummer", result.ErrorMsg);
-            }
-        }
-
-
-        
         public no.altinn.infopathCodeList.CodeList GetAltinnCodeList(string codelistName, int language)
         {
             // returns a code list from the internal Altinn codelist resources 
@@ -347,29 +373,8 @@ namespace Droneskjema
             return result;
         }
 
-
-        public void erOppstart_Changed(object sender, XmlEventArgs e)
-        {   
-            string errorKey = "OPPSTARTCHANGED";
-            DeleteErrorKey(errorKey);
-
-            bool isGotFeesFromCodeList = GetRpasFeeFromCodeList();
-
-            if (!isGotFeesFromCodeList)
-            {
-                ReportError(e, errorKey, "Avgift", "Feil ved utlesing av avgift, prøv igjen senere");
-            }
-            
-            if (!String.IsNullOrEmpty(e.Site.InnerXml) && Convert.ToBoolean(e.Site.InnerXml) == true)
-            {
-                SetNodeToString("/melding/Betaling/sum", _feeForOppstart.ToString(), String.Empty);
-            }
-            else if (!String.IsNullOrEmpty(e.Site.InnerXml) && Convert.ToBoolean(e.Site.InnerXml) == false)
-            {
-                // Avslutning, ingen betaling, sum settes til _feeForAvslutning
-                SetNodeToString("/melding/Betaling/sum", _feeForAvslutning.ToString(), String.Empty);
-            }
-        }
+    
+    
     }
 
 
