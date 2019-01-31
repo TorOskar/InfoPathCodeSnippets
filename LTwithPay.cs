@@ -64,12 +64,22 @@ namespace Droneskjema
         {
             EventManager.XmlEvents["/melding/Organisasjon/organisasjonsnummer"].Changed += new XmlChangedEventHandler(organisasjonsnummer_Changed);
             EventManager.XmlEvents["/melding/Skjemadata/erOppstart"].Changed += new XmlChangedEventHandler(erOppstart_Changed);
+            EventManager.XmlEvents["/uictrl/land_pulldown_data", "GuiElementControl"].Changed += new XmlChangedEventHandler(GuiElementControl__land_pulldown_data_Changed);
+            EventManager.XmlEvents["/melding/Organisasjon/land"].Validating += new XmlValidatingEventHandler(Organisasjon_land_Validating);
         }
 
         
         
         public void organisasjonsnummer_Changed(object sender, XmlEventArgs e)
         {
+            
+            // Only run test if ifForetak is true;
+            if (!GetMainDataSource_isForetak())
+            {
+                return;
+            }
+            
+            
             string errorKey = "ORGNUM";
 
             ValidationResult result = Validate_organisasjonsnummer(e.Site.InnerXml);
@@ -117,6 +127,66 @@ namespace Droneskjema
             }
         }
 
+
+
+        public void GuiElementControl__land_pulldown_data_Changed(object sender, XmlEventArgs e)
+        {
+            // This should hit in the case a value is set on the pulldown list for the land.
+            // If the system is operating in the SetGuiCtrlNode("/uictrl/land", "USEPULLDOWN"); mode, 
+            // the current data in /uictrl/land_pulldown_data should be copied over to 
+            // /melding/Organisasjon/land
+
+            if (isSystemIn_USEPULLDOWN())
+            {
+                SetNodeToString("/melding/Organisasjon/land", get_land_pulldown_data(), "");   
+            }
+        }
+
+        public string get_land_pulldown_data()
+        {
+            try {
+                DataSource guiCtrl = DataSources["GuiElementControl"];
+                XPathNavigator guiNav = guiCtrl.CreateNavigator().SelectSingleNode("/uictrl/land_pulldown_data", NamespaceManager);
+                return guiNav.InnerXml.ToString();
+            }
+            catch
+            {
+                return "";
+            }
+        }
+        
+        
+        public bool isSystemIn_USEPULLDOWN()
+        {
+            try
+            {
+                DataSource guiCtrl = DataSources["GuiElementControl"];
+                XPathNavigator guiNav = guiCtrl.CreateNavigator().SelectSingleNode("/uictrl/land", NamespaceManager);
+
+                if (string.Equals(guiNav.InnerXml.ToString(), "USEPULLDOWN")) return true;
+                else return false;
+            }
+            catch
+            {
+                return false;
+            }
+       
+        }
+
+        
+        public void Organisasjon_land_Validating(object sender, XmlValidatingEventArgs e)
+        {
+            string errorKey = "FORETAKADRLAND";
+
+            if (isSystemIn_USEPULLDOWN() && string.Equals(e.Site.InnerXml.ToString(), ""))
+            {
+                ReportError(e, errorKey, "Land", "Velg land i foretakets adresse");
+            }
+            else
+            {
+                DeleteErrorKey(errorKey);
+            }
+        }
         
         
         public int GetTheFormLanguageCode()
@@ -125,7 +195,7 @@ namespace Droneskjema
 
             if (FormState.Contains("Language"))
             {
-                if (FormState["Language"].Equals(1044)) cc =  1044;
+                if (FormState["Language"].Equals(1044)) cc = 1044;
                 if (FormState["Language"].Equals(2068)) cc = 2068;
                 if (FormState["Language"].Equals(1033)) cc = 1033;
             }
@@ -190,7 +260,26 @@ namespace Droneskjema
             }
         }
 
-        public void SetGuiCtrlForEmptyErData(string fieldValue, string guiNodeXpath)
+
+        public bool GetMainDataSource_isForetak()
+        {
+            try
+            {
+                XPathNavigator mainData = MainDataSource.CreateNavigator();
+                XPathNavigator node = mainData.SelectSingleNode("/melding/Skjemadata/erForetak", NamespaceManager);
+                
+                if (string.Equals(node.InnerXml.ToString(), "true")) return true;
+                else return false;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+        
+        
+        
+        public void SetGuiCtrlData_CheckEmptyValue_SetCanEdit(string fieldValue, string guiNodeXpath)
         {
             if (String.IsNullOrEmpty(fieldValue))
             {
@@ -204,33 +293,37 @@ namespace Droneskjema
             string nullMelding = "";
 
             SetNodeToString("/melding/Organisasjon/adresse", data.BusinessAddress, nullMelding);
-            SetGuiCtrlForEmptyErData(data.BusinessAddress, "/uictrl/adresse");
+            SetGuiCtrlData_CheckEmptyValue_SetCanEdit(data.BusinessAddress, "/uictrl/adresse");
 
             SetNodeToString("/melding/Organisasjon/e-post", data.EMailAddress, nullMelding);
-            SetGuiCtrlForEmptyErData(data.EMailAddress, "/uictrl/e-post");
+            SetGuiCtrlData_CheckEmptyValue_SetCanEdit(data.EMailAddress, "/uictrl/e-post");
 
             LT_LandCountryInfo countryName = FindAltinnCodeListNameForCountryCode(data.CountryCode);
-            if (countryName != null) 
+            if (countryName != null)
             {
                 SetNodeToString("/melding/Organisasjon/land", countryName.BackendCode, nullMelding);
                 SetGuiCtrlNode("/uictrl/land_display_field", countryName.Name);
                 SetGuiCtrlNode("/uictrl/land", "USETEXTBOX");
+                SetGuiCtrlNode("/uictrl/land_pulldown_data", "Norge");
             }
             else
+            {
                 SetGuiCtrlNode("/uictrl/land", "USEPULLDOWN");
-            SetNodeToString("/melding/Organisasjon/land", null, null);
+            }
     
             SetNodeToString("/melding/Organisasjon/navn", data.Name, nullMelding);
-            SetGuiCtrlForEmptyErData(data.Name, "/uictrl/navn");
+            SetGuiCtrlData_CheckEmptyValue_SetCanEdit(data.Name, "/uictrl/navn");
 
             SetNodeToString("melding/Organisasjon/postnummer", data.BusinessPostCode, nullMelding);
-            SetGuiCtrlForEmptyErData(data.BusinessPostCode, "/uictrl/postnummer");
+            SetGuiCtrlData_CheckEmptyValue_SetCanEdit(data.BusinessPostCode, "/uictrl/postnummer");
 
             SetNodeToString("/melding/Organisasjon/poststed", data.BusinessPostCity, nullMelding);
-            SetGuiCtrlForEmptyErData(data.BusinessPostCity, "/uictrl/poststed");
+            SetGuiCtrlData_CheckEmptyValue_SetCanEdit(data.BusinessPostCity, "/uictrl/poststed");
 
             SetNodeToString("/melding/Organisasjon/telefon", data.TelephoneNumber, nullMelding);
-            SetGuiCtrlForEmptyErData(data.TelephoneNumber, "/uictrl/telefon");
+            SetGuiCtrlData_CheckEmptyValue_SetCanEdit(data.TelephoneNumber, "/uictrl/telefon");
+
+
         }
 
 
@@ -373,8 +466,6 @@ namespace Droneskjema
             return result;
         }
 
-    
-    
     }
 
 
