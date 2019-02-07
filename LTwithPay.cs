@@ -66,44 +66,9 @@ namespace Droneskjema
             EventManager.XmlEvents["/melding/Skjemadata/erOppstart"].Changed += new XmlChangedEventHandler(erOppstart_Changed);
             EventManager.XmlEvents["/uictrl/land_pulldown_data", "GuiElementControl"].Changed += new XmlChangedEventHandler(GuiElementControl__land_pulldown_data_Changed);
             EventManager.XmlEvents["/melding/Organisasjon/land"].Changed += new XmlChangedEventHandler(Organisasjon_land_Changed);
-            EventManager.XmlEvents["/melding/Skjemadata/erForetak"].Changed += new XmlChangedEventHandler(erForetak_Changed);
         }
 
 
-        public void erForetak_Changed(object sender, XmlEventArgs e)
-        {
-            string nullMelding = "";
-            
-            if (string.Equals(e.Site.InnerXml.ToString(), "false"))
-            {
-                SetNodeToString("/melding/Organisasjon/organisasjonsnummer", "privatperson", nullMelding);
-                SetNodeToString("/melding/Organisasjon/adresse", "privatperson", nullMelding);
-                SetNodeToString("/melding/Organisasjon/e-post", "privatperson", nullMelding);
-                SetNodeToString("/melding/Organisasjon/land", "privatperson", nullMelding);
-                SetNodeToString("/melding/Organisasjon/navn", "privatperson", nullMelding);
-                SetNodeToString("melding/Organisasjon/postnummer", "privatperson", nullMelding);
-                SetNodeToString("/melding/Organisasjon/poststed", "privatperson", nullMelding);
-                SetNodeToString("/melding/Organisasjon/telefon", "privatperson", nullMelding);
-            }
-            else if (string.Equals(e.Site.InnerXml.ToString(), "true"))
-            {
-                SetNodeToString("/melding/Organisasjon/organisasjonsnummer", null, nullMelding);
-                SetNodeToString("/melding/Organisasjon/adresse", null, nullMelding);
-                SetNodeToString("/melding/Organisasjon/e-post", null, nullMelding);
-                SetNodeToString("/melding/Organisasjon/land", null, nullMelding);
-                SetNodeToString("/melding/Organisasjon/navn", null, nullMelding);
-                SetNodeToString("melding/Organisasjon/postnummer", null, nullMelding);
-                SetNodeToString("/melding/Organisasjon/poststed", null, nullMelding);
-                SetNodeToString("/melding/Organisasjon/telefon", null, nullMelding);
-            }
-            else
-            {
-                // do nothing ... initial state
-            }
-        }
-
-        
-        
         
         
         public void organisasjonsnummer_Changed(object sender, XmlEventArgs e)
